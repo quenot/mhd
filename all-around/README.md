@@ -1,2 +1,2 @@
 # mhd
-Work in progress.
+Coming soon. Just cleaning the code before release.
