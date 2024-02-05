@@ -3,7 +3,7 @@ This repository contains the code used for generating the images and animations 
 https://youtu.be/IYibLoznmNg <br>
 https://youtu.be/4iM3SSK18wo
 
-It integrates FreeFEM++, pyfreefem, pymedit, magpylib, pyvista, matplotlib and OpenCV for simulating and visualizing MHD thrusters.
+It integrates FreeFEM++, pyfreefem, pymedit, magpylib, pyvista, matplotlib and OpenCV for simulating and visualizing the operation of MHD thrusters.
 
 It worked with the version of the packages listed in requirements.txt <br>
 In addition, you will need to install FreeFem++ (I used version 4.13) and it should be in the search path. <br>
