@@ -6,7 +6,7 @@ https://youtu.be/4iM3SSK18wo
 It integrates FreeFEM++, pyfreefem, pymedit, magpylib, pyvista, matplotlib and OpenCV for simulating and visualizing MHD thrusters.
 
 It worked with the version of the packages listed in requirements.txt
-In addition, you will need to install FreeFem++ and it should be in the search path
+In addition, you will need to install FreeFem++ (I used version 4.13) and it should be in the search path
 It currently works only in Linux and probably MacOS but not in Windows. This is a limitation of pyfreefem.
 
 The closestreamline.py file has been included for convenience. There is an independent repository for it at https://github.com/quenot/closestreamlines
