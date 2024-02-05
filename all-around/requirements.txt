@@ -1,0 +1,8 @@
+magpylib==4.4.0
+matplotlib==3.8.0
+numpy==1.26.3
+opencv_python==4.8.1.78
+Pillow==10.2.0
+pyfreefem==1.1.1
+pymedit==1.3
+pyvista==0.42.3

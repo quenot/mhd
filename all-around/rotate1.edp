@@ -1,0 +1,132 @@
+IMPORT "io.edp"
+
+DEFAULT (A, 20.0)
+DEFAULT (B, 20.0)
+DEFAULT (R, 120.0)
+
+DEFAULT (S, 0.0)
+DEFAULT (VITER, 5)
+DEFAULT (IITER, 4)
+
+real ptdensity=0.5, va=10.0, ia, error;
+real[int] xp(8), yp(8);
+
+func real npts(int i) {
+    return ptdensity*sqrt((xp[i+1]-xp[i])*(xp[i+1]-xp[i])+(yp[i+1]-yp[i])*(yp[i+1]-yp[i]));
+}
+
+func real getAlpha(real x2, real y2, real x3, real y3, real R) {
+    real a=(x3-x2)*(x3-x2)+(y3-y2)*(y3-y2), b=2*(x3*(x3-x2)+y3*(y3-y2)), c=x3*x3+y3*y3-R*R;
+    real l=(sqrt(b*b-4*a*c)-b)/(2*a);
+    return atan2(y3+l*(y3-y2),x3+l*(x3-x2));
+}
+
+func real doOne(real a, real b, real R, real theta, real va) {
+    mesh Tvh, Tih;
+    xp[0]=0.0;                    yp[0]=b*cos(theta)/2;
+    xp[1]=xp[0]+a/2;              yp[1]=yp[0];
+    xp[2]=xp[1]+b*sin(theta);     yp[2]=yp[1]-b*cos(theta);
+    xp[3]=xp[2]-a/2*cos(2*theta); yp[3]=yp[2]-a/2*sin(2*theta);
+    border C0(t=0, 1) {x=xp[0]+(xp[1]-xp[0])*t; y=yp[0]+(yp[1]-yp[0])*t;}
+    border C1(t=0, 1) {x=xp[1]+(xp[2]-xp[1])*t; y=yp[1]+(yp[2]-yp[1])*t;}
+    border C2(t=0, 1) {x=xp[2]+(xp[3]-xp[2])*t; y=yp[2]+(yp[3]-yp[2])*t;}
+    real alpha=getAlpha(xp[2], yp[2], xp[3], yp[3], R);
+    if (theta == 0) {
+        xp[4]=xp[0]; yp[4]=yp[0];
+        real hm = sqrt(a*b/2)/64;
+        border C3(t=0, 1) {x=xp[3]+(xp[4]-xp[3])*t; y=yp[3]+(yp[4]-yp[3])*t;}
+        // Potential
+        Tvh=buildmesh(C0(-npts(0))+C1(-npts(1))+C2(-npts(2))+C3(-npts(3)));
+        fespace Vh2(Tvh, P2); Vh2 vh, vvh;
+        problem Potential (vh, vvh)=int2d(Tvh)(dx(vh)*dx(vvh)+dy(vh)*dy(vvh))+on(C0, vh=va)+on(C2, vh=0.0);
+        error=0.01; for (int j=0; j < $VITER; j++) {Potential; Tvh=adaptmesh(Tvh, vh, err=error, hmax=hm); error=error/2;} Potential;
+        exportMesh(Tvh); fespace Vh1(Tvh, P1); Vh1 vh1=vh; exportArray(vh1[]);
+        // Current
+        ia=int1d(Tvh, C0) (dy(vh));
+        Tih=buildmesh(C0(-npts(0))+C1(-npts(1))+C2(-npts(2))+C3(-npts(3)));
+        fespace Ih2(Tih, P2); Ih2 ih, iih;
+        problem Current (ih, iih)=int2d(Tih)(dx(ih)*dx(iih)+dy(ih)*dy(iih))+on(C1, ih=0.0)+on(C3, ih=ia);
+        error=0.01; for (int j=0; j < $IITER; j++) {Current; Tih=adaptmesh(Tih, ih, err=error, hmax=hm); error=error/2;} Current;
+        exportMesh(Tih); fespace Ih1(Tih, P1); Ih1 ih1=ih; exportArray(ih1[]);
+    } else if (alpha <= -pi/2) {
+        xp[4]=0.0; yp[4]=yp[3]-xp[3]*(yp[3]-yp[2])/(xp[3]-xp[2]); xp[5]=xp[0]; yp[5]=yp[0];
+        real l42 = sqrt((xp[4]-xp[2])*(xp[4]-xp[2])+(yp[4]-yp[2])*(yp[4]-yp[2]));
+        real l40 = sqrt((xp[4]-xp[0])*(xp[4]-xp[0])+(yp[4]-yp[0])*(yp[4]-yp[0]));
+        real hm = sqrt(l42*l40)/64;
+        border C3(t=0, 1) {x=xp[3]+(xp[4]-xp[3])*t; y=yp[3]+(yp[4]-yp[3])*t;}
+        border C4(t=0, 1) {x=xp[4]+(xp[5]-xp[4])*t; y=yp[4]+(yp[5]-yp[4])*t;}
+        // Potential
+        Tvh=buildmesh(C0(-npts(0))+C1(-npts(1))+C2(-npts(2))+C3(-npts(3))+C4(-npts(4)));
+        fespace Vh2(Tvh, P2); Vh2 vh, vvh;
+        problem Potential (vh, vvh)=int2d(Tvh)(dx(vh)*dx(vvh)+dy(vh)*dy(vvh))+on(C0, vh=va)+on(C2, vh=0.0);
+        error=0.01; for (int j=0; j < $VITER; j++) {Potential; Tvh=adaptmesh(Tvh, vh, err=error, hmax=hm); error=error/2;} Potential;
+        exportMesh(Tvh); fespace Vh1(Tvh, P1); Vh1 vh1=vh; exportArray(vh1[]);
+        // Current
+        ia=int1d(Tvh, C0) (dy(vh));
+        Tih=buildmesh(C0(-npts(0))+C1(-npts(1))+C2(-npts(2))+C3(-npts(3))+C4(-npts(4)));
+        fespace Ih2(Tih, P2); Ih2 ih, iih;
+        problem Current (ih, iih)=int2d(Tih)(dx(ih)*dx(iih)+dy(ih)*dy(iih))+on(C1, ih=0.0)+on(C3, ih=ia)+on(C4, ih=ia);
+        error=0.01; for (int j=0; j < $IITER; j++) {Current; Tih=adaptmesh(Tih, ih, err=error, hmax=hm); error=error/2;} Current;
+        exportMesh(Tih); fespace Ih1(Tih, P1); Ih1 ih1=ih; exportArray(ih1[]);
+    } else if (alpha < pi/2) {
+        xp[4]=R*cos(alpha); yp[4]=R*sin(alpha); xp[5]=0.0; yp[5]=-R; xp[6]=xp[0]; yp[6]=yp[0];
+        border C3(t=0, 1) {x=xp[3]+(xp[4]-xp[3])*t; y=yp[3]+(yp[4]-yp[3])*t;}
+        border C4(t=0, 1) {x=R*cos(alpha+t*(-pi/2-alpha)); y=R*sin(alpha+t*(-pi/2-alpha));}
+        border C5(t=0, 1) {x=xp[5]+(xp[6]-xp[5])*t; y=yp[5]+(yp[6]-yp[5])*t;}
+        // Potential
+        Tvh=buildmesh(C0(-npts(0))+C1(-npts(1))+C2(-npts(2))+C3(-npts(3))+C4(-npts(4))+C5(-npts(5)));
+        fespace Vh2(Tvh, P2); Vh2 vh, vvh;
+        problem Potential (vh, vvh)=int2d(Tvh)(dx(vh)*dx(vvh)+dy(vh)*dy(vvh))+on(C0, vh=va)+on(C2, vh=0.0);
+        error=0.01; for (int j=0; j < $VITER; j++) {Potential; Tvh=adaptmesh(Tvh, vh, err=error); error=error/2;} Potential;
+        exportMesh(Tvh); fespace Vh1(Tvh, P1); Vh1 vh1=vh; exportArray(vh1[]);
+        // Current
+        ia=int1d(Tvh, C0) (dy(vh));
+        Tih=buildmesh(C0(-npts(0))+C1(-npts(1))+C2(-npts(2))+C3(-npts(3))+C4(-npts(4))+C5(-npts(5)));
+        fespace Ih2(Tih, P2); Ih2 ih, iih;
+        problem Current (ih, iih)=int2d(Tih)(dx(ih)*dx(iih)+dy(ih)*dy(iih))+on(C1, ih=0.0)+on(C3, ih=ia)+on(C4, ih=ia)+on(C5, ih=ia);
+        error=0.01; for (int j=0; j < $IITER; j++) {Current; Tih=adaptmesh(Tih, ih, err=error); error=error/2;} Current;
+        exportMesh(Tih); fespace Ih1(Tih, P1); Ih1 ih1=ih; exportArray(ih1[]);
+    } else if (theta < pi) {
+        xp[4]=0.0; yp[4]=yp[4]=yp[3]-xp[3]*(yp[3]-yp[2])/(xp[3]-xp[2]);
+        xp[5]=0.0; yp[5]=+R; xp[6]=0.0; yp[6]=-R; xp[7]=xp[0]; yp[7]=yp[0];
+        border C3(t=0, 1) {x=xp[3]+(xp[4]-xp[3])*t; y=yp[3]+(yp[4]-yp[3])*t;}
+        border C4(t=0, 1) {x=xp[4]+(xp[5]-xp[4])*t; y=yp[4]+(yp[5]-yp[4])*t;}
+        border C5(t=0, 1) {x=R*sin(pi*t); y=R*cos(pi*t);}
+        border C6(t=0, 1) {x=xp[6]+(xp[7]-xp[6])*t; y=yp[6]+(yp[7]-yp[6])*t;}
+        // Potential
+        Tvh=buildmesh(C0(-npts(0))+C1(-npts(1))+C2(-npts(2))+C3(-npts(3))+C4(-npts(4))+C5(-npts(5))+C6(-npts(6)));
+        fespace Vh2(Tvh, P2); Vh2 vh, vvh;
+        problem Potential (vh, vvh)=int2d(Tvh)(dx(vh)*dx(vvh)+dy(vh)*dy(vvh))+on(C0, vh=va)+on(C2, vh=0.0);
+        error=0.01; for (int j=0; j < $VITER; j++) {Potential; Tvh=adaptmesh(Tvh, vh, err=error); error=error/2;} Potential;
+        exportMesh(Tvh); fespace Vh1(Tvh, P1); Vh1 vh1=vh; exportArray(vh1[]);
+        // Current
+        ia=int1d(Tvh, C0) (dy(vh));
+        Tih=buildmesh(C0(-npts(0))+C1(-npts(1))+C2(-npts(2))+C3(-npts(3))+C4(-npts(4))+C5(-npts(5))+C6(-npts(6)));
+        fespace Ih2(Tih, P2); Ih2 ih, iih;
+        problem Current (ih, iih)=int2d(Tih)(dx(ih)*dx(iih)+dy(ih)*dy(iih))
+                                 +on(C1, ih=0.0)+on(C3, ih=ia)+on(C4, ih=ia)+on(C5, ih=ia)+on(C6, ih=ia);
+        error=0.01; for (int j=0; j < $IITER; j++) {Current; Tih=adaptmesh(Tih, ih, err=error); error=error/2;} Current;
+        exportMesh(Tih); fespace Ih1(Tih, P1); Ih1 ih1=ih; exportArray(ih1[]);
+    } else {
+        xp[4]=0.0; yp[4]=+R; xp[5]=0.0; yp[5]=-R; xp[6]=xp[0]; yp[6]=yp[0];
+        border C3(t=0, 1) {x=xp[3]+(xp[4]-xp[3])*t; y=yp[3]+(yp[4]-yp[3])*t;}
+        border C4(t=0, 1) {x=R*sin(pi*t); y=R*cos(pi*t);}
+        border C5(t=0, 1) {x=xp[5]+(xp[6]-xp[5])*t; y=yp[5]+(yp[6]-yp[5])*t;}
+        // Potential
+        Tvh=buildmesh(C0(-npts(0))+C1(-npts(1))+C2(-npts(2))+C3(-npts(3))+C4(-npts(4))+C5(-npts(5)));
+        fespace Vh2(Tvh, P2); Vh2 vh, vvh;
+        problem Potential (vh, vvh)=int2d(Tvh)(dx(vh)*dx(vvh)+dy(vh)*dy(vvh))+on(C0, vh=va)+on(C2, vh=0.0);
+        error=0.01; for (int j=0; j < $VITER; j++) {Potential; Tvh=adaptmesh(Tvh, vh, err=error); error=error/2;} Potential;
+        exportMesh(Tvh); fespace Vh1(Tvh, P1); Vh1 vh1=vh; exportArray(vh1[]);
+        // Current
+        ia=int1d(Tvh, C0) (dy(vh));
+        Tih=buildmesh(C0(-npts(0))+C1(-npts(1))+C2(-npts(2))+C3(-npts(3))+C4(-npts(4))+C5(-npts(5)));
+        fespace Ih2(Tih, P2); Ih2 ih, iih;
+        problem Current (ih, iih)=int2d(Tih)(dx(ih)*dx(iih)+dy(ih)*dy(iih))+on(C1, ih=0.0)+on(C3, ih=ia)+on(C4, ih=ia)+on(C5, ih=ia);
+        error=0.01; for (int j=0; j < $IITER; j++) {Current; Tih=adaptmesh(Tih, ih, err=error); error=error/2;} Current;
+        exportMesh(Tih); fespace Ih1(Tih, P1); Ih1 ih1=ih; exportArray(ih1[]);
+    }
+    return(ia);
+}
+
+ia = doOne($A, $B, $R, $S*pi, va);
