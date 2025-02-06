@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import brentq
 
-t0, S0, T0, M0 = 15, 35, 273.15, 1.0
+t0, S0, T0, M0, rho0 = 15, 35, 273.15, 1.0, 1025.878259
 MNaCl = 58.4428e-3 # molar mass of NaCl in kg/L
 
 ################################################################################################
@@ -12,20 +12,23 @@ MNaCl = 58.4428e-3 # molar mass of NaCl in kg/L
 # 0 ‰ < S < 160 ‰ and 10 < t < 180 °C
 
 Crho = np.array([[1008.05475, 57.6565,  0.163],
-               [ -54.0995,   1.571,  -0.423],
-               [  -6.1235,   1.74,   -0.009],
-               [    0.346,  -0.087,  -0.053]])
+                 [ -54.0995,   1.571,  -0.423],
+                 [  -6.1235,   1.74,   -0.009],
+                 [    0.346,  -0.087,  -0.053]])
 
-def DensityFromSalinityTemperature(S=S0, t=t0):
-    return(np.polynomial.chebyshev.chebval2d((t-100)/80, (S-75)/75, Crho))   # kg/m³
+def DensityFromSalinityTemperature(S=S0, t=t0, target=0.0):
+    return np.polynomial.chebyshev.chebval2d((t-100)/80, (S-75)/75, Crho)-target   # kg/m³
+
+def SalinityFromDensityTemperature(rho=rho0, t=t0):
+    return brentq(DensityFromSalinityTemperature, 0, 360.0, (t, rho))   # ‰
 
 # Molarity M as a function of Salinity S and vice-versa at temperature t
 
 def MolarityFromSalinityTemperature(S=S0, t=t0, target=0.0):
-    return(1e-6*S*DensityFromSalinityTemperature(S=S, t=t)/MNaCl-target) # Mol/kg
+    return 1e-6*S*DensityFromSalinityTemperature(S=S, t=t)/MNaCl-target # Mol/kg
 
 def SalinityFromMolarityTemperature(M=M0, t=t0):
-    return(brentq(MolarityFromSalinityTemperature, 0, 360, (t, M)))   # ‰
+    return brentq(MolarityFromSalinityTemperature, 0, 360, (t, M))   # ‰
 
 
 ################################################################################################
@@ -58,11 +61,14 @@ rm, dr = 1.099268, 0.994007
 
 def MolarConductivityFromSalinityTemperature(S=S0, t=t0):
     m = S/(MNaCl*1e3)  # Molality
-    return(np.polynomial.chebyshev.chebval2d((t-tm)/dt, (np.sqrt(m)-rm)/dr, CLambda))
+    return np.polynomial.chebyshev.chebval2d((t-tm)/dt, (np.sqrt(m)-rm)/dr, CLambda)
 
 def ConductivityFromSalinityTemperature(S=S0, t=t0):
     M = S/(MNaCl*1e3)*DensityFromSalinityTemperature(S=S, t=t)/1000
-    return(MolarConductivityFromSalinityTemperature(S=S, t=t)*M/10)
+    return MolarConductivityFromSalinityTemperature(S=S, t=t)*M/10
 
 def ConductivityFromMolarityTemperature(M=M0, t=t0):
-    return(ConductivityFromSalinityTemperature(S=SalinityFromMolarityTemperature(M=M, t=t), t=t))
+    return ConductivityFromSalinityTemperature(S=SalinityFromMolarityTemperature(M=M, t=t), t=t)
+
+def ConductivityFromDensityTemperature(rho=rho0, t=t0):
+    return ConductivityFromSalinityTemperature(S=SalinityFromDensityTemperature(rho=rho, t=t), t=t)
