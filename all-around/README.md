@@ -7,7 +7,7 @@ It integrates FreeFEM++, pyfreefem, pymedit, magpylib, pyvista, matplotlib and O
 
 It worked with the version of the packages listed in requirements.txt <br>
 In addition, you will need to install FreeFem++ (I used version 4.13) and it should be in the search path. <br>
-It currently works only in Linux and probably MacOS but not in Windows. This is a limitation of pyfreefem (or of pymedit). <br>
+It currently works only in Linux and probably MacOS but not in Windows. This is a limitation of pyfreefem. <br>
 It does not work with numpy 2.x. This is also a limitation of pyfreefem (or of pymedit). <br>
 The edp folder from https://gitlab.com/florian.feppon/pyfreefem/-/tree/master/pyfreefem may need to be manually added the the pyfreefem installed folder, typically something like ~/anaconda3/envs/mpl511/lib/python3.12/site-packages/pyfreefem
 
